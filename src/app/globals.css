@@ -1,0 +1,592 @@
+@import "tailwindcss";
+
+/* ── GrindCourt design tokens · "Instrument" — Cash-App-leaning: near-black
+   ground, almost no hairlines (spacing + surface steps do the separating),
+   fully pill-shaped controls, ONE bold accent used boldly (solid-fill CTAs,
+   dark text on top), restraint everywhere else. Replaces the old flat
+   amber/red "Pulse" system. ── */
+:root {
+  --ground: #0a0b0c;
+  --surface: #16171a;
+  --surface-raised: #1d1f22;
+  --line: #2a2c2f;
+  --ink: #f2f3f5;
+  --ink-dim: #9296a0;
+  --ink-faint: #5c5f66;
+
+  --accent: #00e08c;
+  --accent-ink: #04140d; /* near-black text laid ON the accent fill — Cash App's signature move, never pure white/black */
+  --danger: #ff5c5c; /* fines/violations only — never decorative */
+
+  /* legacy alias names kept so every existing component/class that reads
+     --amber/--red/--treasury/--verdict keeps working without a find/replace
+     across the app — they now resolve into the new palette instead of the
+     old amber/red duo. --amber is desaturated on purpose: it's still used
+     as a quiet "pending/warn" label color in a few places, and must not
+     compete with --accent as a second bold color. --red/--verdict both
+     collapse onto the two real tokens above. */
+  --amber: #b3924f;
+  --red: var(--danger);
+  --treasury: var(--accent);
+  --verdict: var(--accent);
+
+  /* legacy names some components still reference directly */
+  --surface2: var(--surface-raised);
+
+  --background: var(--ground);
+  --foreground: var(--ink);
+}
+
+/* ── Personal Mode · "Drift" — a different globe, not a filtered view ──
+   Team mode ("Instrument") is near-black/pill-shaped with a bold emerald
+   accent reserved for primary actions. Personal mode keeps the exact same
+   structural language (same pills, same solid-fill CTA pattern, same ring
+   motif) but swaps in its own cooler blue-violet identity — declared as its
+   own --p-* token set here, then layered onto the *existing* shared
+   variable names ONLY inside .personal-scope. Because every shared class
+   (.panel, .btn-primary, .bar .fill, .segpill.active, .ai-orb, the stat
+   rings…) reads --accent/--ground/etc rather than a literal hex, they all
+   recolor for free the instant you're inside this scope — switching globes
+   genuinely feels like the accent identity changed with everything else. */
+.personal-scope {
+  --p-ground: #0a0d14;
+  --p-surface: #161a24;
+  --p-surface-raised: #1d2230;
+  --p-line: #2a3040;
+  --p-ink: #eef1fb;
+  --p-ink-dim: #8e97b8;
+  --p-ink-faint: #4c5470;
+  --p-accent: #6ea8ff;
+  --p-accent2: #8b7fff;
+  --p-accent-ink: #06101f;
+
+  --ground: var(--p-ground);
+  --surface: var(--p-surface);
+  --surface-raised: var(--p-surface);
+  --surface2: var(--p-surface-raised);
+  --line: var(--p-line);
+  --ink: var(--p-ink);
+  --ink-dim: var(--p-ink-dim);
+  --ink-faint: var(--p-ink-faint);
+  --accent: var(--p-accent);
+  --accent-ink: var(--p-accent-ink);
+  --amber: var(--p-accent2);
+  --red: var(--danger);
+  --treasury: var(--p-accent);
+  --verdict: var(--p-accent);
+  --background: var(--p-ground);
+  --foreground: var(--p-ink);
+
+  min-height: 100dvh;
+  background: var(--p-ground);
+  position: relative;
+}
+
+/* the one decorative flourish Personal mode is allowed that Team mode
+   isn't — a very quiet ambient wash so the space reads as its own place
+   the instant it mounts, not just recolored boxes. Fixed so it doesn't
+   scroll away and never interferes with contrast (opacity is tiny). */
+.personal-scope::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 20% 0%, rgba(110, 168, 255, 0.10), transparent 60%),
+    radial-gradient(50% 35% at 100% 10%, rgba(139, 127, 255, 0.07), transparent 65%);
+}
+/* NOTE: content that needs to sit above the ambient wash lifts itself with
+   an explicit `relative z-10` Tailwind pair at the call site (see
+   src/app/personal/layout.tsx) rather than a blanket ".personal-scope > *"
+   rule here — a blanket rule would fight PersonalBottomNav's own `fixed`
+   utility class at equal CSS specificity, and since this stylesheet is
+   unlayered while Tailwind's utilities live inside its own cascade layer,
+   unlayered rules win regardless of source order and would have silently
+   broken the nav's fixed positioning. */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* referencing the :root tokens (not literal hex) so any scope that
+     re-layers --ground/--ink/--accent/etc (see .personal-scope above)
+     recolors Tailwind-generated utilities too, not just hand-authored CSS
+     classes — otherwise text-ink-dim/bg-accent/border-danger etc would
+     stay hardcoded to Team's palette even inside Personal mode. */
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-amber: var(--amber);
+  --color-red: var(--red);
+  --color-verdict: var(--verdict);
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-oswald);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-manrope), -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  overscroll-behavior-y: none;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Native form controls (datetime-local especially) have an intrinsic
+   min-content width that ignores flex/grid shrinking on some mobile
+   browsers, which is what was pushing the whole page into a horizontal
+   swipe on the Goals tab. Force every input/select to respect its
+   container no matter what. */
+input, select, textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* flat ground — no ambient glow, no grain in Team mode. quiet by default so
+   the AI-orb glow and the accent-fill CTAs mean something every time they
+   appear instead of being everywhere. */
+.app-bg {
+  background: var(--ground);
+}
+
+/* surfaces separate via background-color steps, not strokes — borders are
+   rare in this system by design. */
+.panel {
+  background: var(--surface);
+}
+
+.panel-strong {
+  background: var(--surface-raised);
+}
+
+.display {
+  font-family: var(--font-manrope), sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.label {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* every actionable/numeric element gets tabular figures + confident weight
+   by default per the design brief — money/stat numbers read as hero content,
+   not captions. */
+.money, .stat-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* money/hero-number gradient text is retired — Cash App shows big figures as
+   plain, extremely confident solid ink, not a decorative gradient. Kept as a
+   class (rather than deleted + hunted through every call site) so it now
+   just means "big bold money", which is exactly what the callers want. */
+.grad-text {
+  color: var(--ink);
+}
+
+/* the one glow/gradient element in the whole app — marks the AI speaking
+   (Judge, Board, Narrator, Predictor, Assistant). Never used decoratively.
+   Re-colored onto the new accent (and, inside .personal-scope, the blue-
+   violet accent) instead of the old amber-red duo. */
+.ai-orb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 55%, white), var(--accent) 68%);
+  box-shadow: 0 0 16px -2px color-mix(in srgb, var(--accent) 65%, transparent);
+  flex-shrink: 0;
+}
+.ai-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* ── Primary CTA — the single most Cash-App-specific detail in the system:
+   full pill, solid accent fill, dark (near-black) text on top. Used for
+   every primary action (mark done, submit, confirm, pay, log, commit…).
+   Kept under the old .btn-verdict name so no call site needs touching —
+   every existing "mark done"/"submit"/"pay" button already uses it. Radius
+   is forced here (not left to each caller's rounded-xl/rounded-lg utility)
+   so every primary button in the app is a true pill regardless of what
+   Tailwind radius utility still sits in its className — this stylesheet is
+   unlayered and always wins that particular property against Tailwind's
+   layered utilities. */
+.btn-verdict {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
+  border-radius: 999px;
+}
+
+.btn-ghost {
+  background: var(--surface-raised);
+  color: var(--ink);
+  border-radius: 999px;
+}
+
+.card-fine {
+  background: var(--surface);
+}
+
+.card-goal {
+  background: var(--surface);
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-radius: 16px;
+  padding: 13px 14px;
+  background: var(--surface);
+}
+
+.bar {
+  height: 4px;
+  background: var(--surface-raised);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bar .fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.stat-num {
+  font-family: var(--font-manrope), sans-serif;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── Ring stat — Whoop/Oura-style circular progress ring. See <RingStat> /
+   <HeroRing> in page.tsx / personal/page.tsx. Pure CSS home for the
+   wrapper; the ring itself is inline SVG (stroke-dasharray) so its
+   progress can vary per-instance without a stylesheet entry per
+   percentage. */
+.ring-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.ring-stat svg { transform: rotate(-90deg); }
+
+/* ── Hero ring — the ONE dominant stat per screen (approved-composition
+   rule #1). Large centered ring, ~148px, with the number set inside it.
+   Everything else that used to be its own ring/box drops to a single
+   quiet inline text line underneath (see .stat-inline). */
+.ring-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ring-hero svg { transform: rotate(-90deg); }
+.stat-inline {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  font-weight: 600;
+}
+.stat-inline b {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 800;
+}
+.stat-inline .sep {
+  color: var(--ink-faint);
+  margin: 0 2px;
+}
+
+/* ── Horizontal card carousel — entry-point cards (Assistant, Talk to the
+   Judge, any quick-action) live in a single swipeable row, never stacked.
+   Approved-composition rule #2. */
+.carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+.carousel::-webkit-scrollbar { display: none; }
+.carousel-card {
+  flex: 0 0 168px;
+  scroll-snap-align: start;
+}
+
+/* ── Boxless list row — task/notification/history rows lose their panel
+   wrapper and separate with a hairline instead. Primary action/status
+   sits on the RIGHT, content on the LEFT (the deliberate flip from the
+   old left-checkbox layout). Approved-composition rule #3. */
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.list-row:last-child { border-bottom: none; }
+
+/* ── Inline progress — sprint/goal bars sit directly under their section
+   heading, no .panel wrapper around them. Approved-composition rule #5. */
+.progress-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Accordion disclosure — secondary/duplicate "create X" forms tuck
+   behind a tap instead of all sitting open on the page at once (the
+   explicit "easy to use, not complex" ask). One primary action stays
+   visible by default; this toggle reveals the rest. */
+.accordion-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 2px;
+  color: var(--ink-dim);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.accordion-chevron {
+  transition: transform 0.2s ease;
+  color: var(--ink-faint);
+}
+.accordion-chevron.open { transform: rotate(180deg); }
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.rise-1 { animation-delay: 0.03s; }
+.rise-2 { animation-delay: 0.08s; }
+.rise-3 { animation-delay: 0.13s; }
+.rise-4 { animation-delay: 0.18s; }
+.rise-5 { animation-delay: 0.23s; }
+.rise-6 { animation-delay: 0.28s; }
+
+@keyframes pulse-alert {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+.pulse-alert { animation: pulse-alert 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .pulse-alert { animation: none; }
+}
+
+input, select, textarea { font-size: 16px; } /* stop iOS zoom-on-focus */
+select { appearance: none; -webkit-appearance: none; }
+
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+.chip-row { scrollbar-width: none; -ms-overflow-style: none; }
+.chip-row::-webkit-scrollbar { display: none; }
+
+/* settings rows — label+description left, control right. No hairline
+   between rows anymore (this system separates with spacing, not strokes);
+   a touch of extra vertical padding compensates so rows still read as
+   distinct without a divider. */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+/* pill segmented control */
+.segpill-group {
+  display: flex;
+  background: var(--surface-raised);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.segpill {
+  background: transparent;
+  color: var(--ink-dim);
+  border: none;
+  border-radius: 999px;
+  padding: 7px 13px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.segpill.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ── Flat bottom nav — plain evenly-spaced icons, no capsule, no sliding
+   pill (approved-composition rule #4, the 3rd redesign in a row to try
+   the pill; this stops it). Active = icon renders in accent color plus a
+   small 4px dot centered beneath it. No transform-based motion between
+   tabs — only a color/opacity fade. */
+.flat-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+.flat-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px 6px;
+  color: var(--ink-faint);
+  transition: color 0.15s ease;
+}
+.flat-nav-item.active { color: var(--accent); }
+.flat-nav-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: transparent;
+}
+.flat-nav-item.active .flat-nav-dot { background: var(--accent); }
+
+/* progress-note thread entry — quiet, spacing-separated like the rest of
+   the app (no hairline). */
+.thread-reply {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+/* real depth instead of flat boxes — panel-strong reads as "raised" above
+   panel via shadow, never a colored border. */
+.panel {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.015) inset;
+}
+.panel-strong {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px -16px rgba(0, 0, 0, 0.7);
+}
+.card-fine,
+.card-goal {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.015) inset, 0 8px 20px -14px rgba(0, 0, 0, 0.6);
+}
+
+/* larger, tighter display headline for section hero copy — used on the
+   Docket/Goals/Ledger/Settings top-of-page headline. */
+.display-hero {
+  font-family: var(--font-manrope), sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+}
+
+/* thin gradient-free divider kept for the rare spot a soft rule reads
+   better than pure whitespace — used sparingly, this system otherwise
+   avoids strokes entirely. */
+.fade-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 25%, var(--line) 75%, transparent);
+}
+
+/* ── Mode transition ("another globe") ─────────────────────────────────
+   Full-screen wipe played by <ModeTransition> around the Team<->Personal
+   switch — see lib/PersonalModeContext.tsx. Two panels slide in from
+   opposite edges and meet, briefly fully covering the screen while the
+   route swaps underneath, then the incoming page's own .rise stagger
+   takes over so arrival still feels alive rather than just "unwiped".*/
+@keyframes wipe-in-l {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes wipe-in-r {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes wipe-out-l {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@keyframes wipe-out-r {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+.mode-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+.mode-wipe .panel-l,
+.mode-wipe .panel-r {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+}
+.mode-wipe .panel-l { left: 0; animation: wipe-in-l 0.26s cubic-bezier(0.65, 0, 0.35, 1) both; }
+.mode-wipe .panel-r { right: 0; animation: wipe-in-r 0.26s cubic-bezier(0.65, 0, 0.35, 1) both; }
+.mode-wipe.leaving .panel-l { animation: wipe-out-l 0.32s cubic-bezier(0.65, 0, 0.35, 1) both; }
+.mode-wipe.leaving .panel-r { animation: wipe-out-r 0.32s cubic-bezier(0.65, 0, 0.35, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-wipe .panel-l,
+  .mode-wipe .panel-r { animation: none; }
+}
